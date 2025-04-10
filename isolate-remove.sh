@@ -1,6 +1,6 @@
 # variables
-INCUS_NETWORK=incusbr-iso
-INCUS_PROFILE=isolated
+INCUS_NETWORK=incusbr-iso-aa
+INCUS_PROFILE=isolated-aa
 INCUS_ACL=public-only
 
 # delete artifacts

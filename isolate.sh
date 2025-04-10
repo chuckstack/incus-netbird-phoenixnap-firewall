@@ -1,7 +1,7 @@
-
 # variables
-INCUS_NETWORK=incusbr-iso
-INCUS_PROFILE=isolated
+# If you need to make additional network bridges, simply change the 'aa' to 'ab', 'ac', 'ad', ....
+INCUS_NETWORK=incusbr-iso-aa
+INCUS_PROFILE=isolated-aa
 INCUS_ACL=public-only
 INCUS_NAME_SERVERS="8.8.8.8,8.8.4.4"
 
@@ -55,9 +55,9 @@ incus network show $INCUS_NETWORK
 echo
 
 echo "---- launch instance ----"
-echo incus launch images:debian/12/cloud delme-debian-isolated-01 --profile isolated
+echo incus launch images:debian/12/cloud delme-debian-iso-01 --profile $INCUS_PROFILE
 echo
 
 echo "---- show acl ----"
-echo incus network acl show public-only
+echo incus network acl show $INCUS_ACL
 echo
