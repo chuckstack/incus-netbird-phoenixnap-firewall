@@ -20,6 +20,16 @@ echo INCUS_ISO_SUBNET_V6=$INCUS_ISO_SUBNET_V6
 INCUS_ISO_DNS=${INCUS_ISO_SUBNET%/*}
 echo INCUS_ISO_DNS=$INCUS_ISO_DNS
 
+# Check to ensure all interfaces exist
+for interface in "$MAIN_INTERFACE"; do
+    if ! ip link show "$interface" >/dev/null 2>&1; then
+        echo
+        echo "ERROR: Interface $interface not found - stopping!!!"
+        echo
+        exit 1
+    fi
+done
+
 # Create and configure an incus acl and apply it to our isolated network bridge
 incus network acl rule add $INCUS_ACL ingress action=allow
 incus network acl rule add $INCUS_ACL egress action=allow
@@ -36,13 +46,13 @@ incus network set $INCUS_NETWORK security.acls=$INCUS_ACL
 incus profile device set $INCUS_PROFILE eth0 security.acls=$INCUS_ACL
 incus profile show $INCUS_PROFILE
 
-# Allow $INCUS_NETWORK interface
+# Allow $INCUS_NETWORK interface - to be replaced with nftables
 #sudo iptables -A INPUT -i $INCUS_NETWORK -j ACCEPT
 #sudo iptables -A OUTPUT -o $INCUS_NETWORK -j ACCEPT
 #sudo ip6tables -A INPUT -i $INCUS_NETWORK -j ACCEPT
 #sudo ip6tables -A OUTPUT -o $INCUS_NETWORK -j ACCEPT
 
-# NAT and forwarding rules
+# NAT and forwarding rules - to be replaced with nftables
 #sudo iptables -t nat -A POSTROUTING -s $INCUS_ISO_SUBNET -o $MAIN_INTERFACE -j MASQUERADE
 #sudo iptables -A FORWARD -i $INCUS_NETWORK -o $MAIN_INTERFACE -j ACCEPT
 #sudo iptables -A FORWARD -i $MAIN_INTERFACE -o $INCUS_NETWORK -j ACCEPT
