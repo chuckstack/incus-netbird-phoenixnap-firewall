@@ -14,7 +14,7 @@ Please review the proposed solution.
 #cloud-config
 
 package_update: true
-package_upgrade: true
+#package_upgrade: true
 
 packages:
   - nftables
@@ -65,10 +65,7 @@ write_files:
       }
 
 runcmd:
-  - systemctl enable nftables
-  - systemctl start nftables
   - nft -f /etc/chuck-stack-temp.conf
-  - systemctl restart nftables
 
 final_message: "The system is now configured with nftables firewall allowing SSH only from authorized IP addresses"
 ```
