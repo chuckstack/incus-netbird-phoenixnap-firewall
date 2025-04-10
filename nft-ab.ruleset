@@ -1,0 +1,179 @@
+# taken after executing isolate.sh
+table ip filter {
+	chain NETBIRD-RT-FWD-IN {
+		ct state related,established counter packets 0 bytes 0 accept
+	}
+
+	chain NETBIRD-RT-FWD-OUT {
+		ct state related,established counter packets 0 bytes 0 accept
+	}
+
+	chain NETBIRD-ACL-INPUT {
+		counter packets 9 bytes 540 accept
+	}
+
+	chain INPUT {
+		type filter hook input priority filter; policy accept;
+		iifname "wt0" ct state related,established counter packets 5566 bytes 406194 accept
+		iifname "wt0" counter packets 9 bytes 540 jump NETBIRD-ACL-INPUT
+		iifname "wt0" counter packets 0 bytes 0 drop
+	}
+
+	chain FORWARD {
+		type filter hook forward priority filter; policy accept;
+		iifname "wt0" counter packets 0 bytes 0 jump NETBIRD-RT-FWD-IN
+		mark 0x1bd20 counter packets 0 bytes 0 accept
+		oifname "wt0" counter packets 0 bytes 0 jump NETBIRD-RT-FWD-OUT
+		iifname "wt0" counter packets 0 bytes 0 drop
+	}
+}
+table ip mangle {
+	chain NETBIRD-RT-PRE {
+		iifname "wt0" fib daddr type local counter packets 5575 bytes 406734 meta mark set 0x1bd20 
+	}
+
+	chain PREROUTING {
+		type filter hook prerouting priority mangle; policy accept;
+		counter packets 411605 bytes 404540416 jump NETBIRD-RT-PRE
+		iifname "wt0" ct state new counter packets 9 bytes 540 ct mark set 0x1bd10 
+	}
+
+	chain POSTROUTING {
+		type filter hook postrouting priority mangle; policy accept;
+		oifname "wt0" ct state new counter packets 0 bytes 0 ct mark set 0x1bd11 
+	}
+}
+table ip nat {
+	chain NETBIRD-RT-NAT {
+		oifname != "lo" mark 0x1bd21 counter packets 0 bytes 0 masquerade 
+		oifname "wt0" mark 0x1bd22 counter packets 0 bytes 0 masquerade 
+	}
+
+	chain NETBIRD-RT-RDR {
+	}
+
+	chain POSTROUTING {
+		type nat hook postrouting priority srcnat; policy accept;
+		counter packets 1480 bytes 104643 jump NETBIRD-RT-NAT
+	}
+
+	chain PREROUTING {
+		type nat hook prerouting priority dstnat; policy accept;
+		counter packets 250695 bytes 11054270 jump NETBIRD-RT-RDR
+	}
+}
+table inet incus {
+	chain pstrt.incusbr0 {
+		type nat hook postrouting priority srcnat; policy accept;
+		ip saddr 10.89.247.0/24 ip daddr != 10.89.247.0/24 masquerade
+		ip6 saddr fd42:c2d1:64e9:ef4e::/64 ip6 daddr != fd42:c2d1:64e9:ef4e::/64 masquerade
+	}
+
+	chain fwd.incusbr0 {
+		type filter hook forward priority filter; policy accept;
+		ip version 4 oifname "incusbr0" accept
+		ip version 4 iifname "incusbr0" accept
+		ip6 version 6 oifname "incusbr0" accept
+		ip6 version 6 iifname "incusbr0" accept
+	}
+
+	chain in.incusbr0 {
+		type filter hook input priority filter; policy accept;
+		iifname "incusbr0" tcp dport 53 accept
+		iifname "incusbr0" udp dport 53 accept
+		iifname "incusbr0" icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+		iifname "incusbr0" udp dport 67 accept
+		iifname "incusbr0" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-solicit, nd-neighbor-solicit, nd-neighbor-advert, mld2-listener-report } accept
+		iifname "incusbr0" udp dport 547 accept
+	}
+
+	chain out.incusbr0 {
+		type filter hook output priority filter; policy accept;
+		oifname "incusbr0" tcp sport 53 accept
+		oifname "incusbr0" udp sport 53 accept
+		oifname "incusbr0" icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+		oifname "incusbr0" udp sport 67 accept
+		oifname "incusbr0" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem, echo-request, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert, mld2-listener-report } accept
+		oifname "incusbr0" udp sport 547 accept
+	}
+
+	chain acl.incusbr-iso {
+		ct state established,related accept
+		iifname "incusbr-iso" ip daddr 10.0.0.0/8 reject with icmp port-unreachable
+		iifname "incusbr-iso" ip daddr 192.168.0.0/16 reject with icmp port-unreachable
+		iifname "incusbr-iso" ip daddr 172.16.0.0/12 reject with icmp port-unreachable
+		oifname "incusbr-iso" accept
+		iifname "incusbr-iso" accept
+		iifname "incusbr-iso" reject
+		oifname "incusbr-iso" reject
+	}
+
+	chain aclin.incusbr-iso {
+		type filter hook input priority filter; policy accept;
+		iifname "incusbr-iso" tcp dport 53 accept
+		iifname "incusbr-iso" udp dport 53 accept
+		iifname "incusbr-iso" udp dport 67 accept
+		iifname "incusbr-iso" udp dport 547 accept
+		iifname "incusbr-iso" icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+		iifname "incusbr-iso" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-solicit, nd-neighbor-solicit, nd-neighbor-advert, mld2-listener-report } accept
+		iifname "incusbr-iso" jump acl.incusbr-iso
+	}
+
+	chain aclout.incusbr-iso {
+		type filter hook output priority filter; policy accept;
+		oifname "incusbr-iso" udp sport 67 accept
+		oifname "incusbr-iso" udp sport 547 accept
+		oifname "incusbr-iso" icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+		oifname "incusbr-iso" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem, echo-request, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert, mld2-listener-report } accept
+		oifname "incusbr-iso" jump acl.incusbr-iso
+	}
+
+	chain aclfwd.incusbr-iso {
+		type filter hook forward priority filter; policy accept;
+		iifname "incusbr-iso" jump acl.incusbr-iso
+		oifname "incusbr-iso" jump acl.incusbr-iso
+	}
+
+	chain pstrt.incusbr-iso {
+		type nat hook postrouting priority srcnat; policy accept;
+		ip saddr 10.1.141.0/24 ip daddr != 10.1.141.0/24 masquerade
+		ip6 saddr fd42:ac71:1f4b:5ba5::/64 ip6 daddr != fd42:ac71:1f4b:5ba5::/64 masquerade
+	}
+
+	chain fwd.incusbr-iso {
+		type filter hook forward priority filter; policy accept;
+		ip version 4 oifname "incusbr-iso" accept
+		ip version 4 iifname "incusbr-iso" accept
+		ip6 version 6 oifname "incusbr-iso" accept
+		ip6 version 6 iifname "incusbr-iso" accept
+	}
+
+	chain in.incusbr-iso {
+		type filter hook input priority filter; policy accept;
+		iifname "incusbr-iso" tcp dport 53 accept
+		iifname "incusbr-iso" udp dport 53 accept
+		iifname "incusbr-iso" icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+		iifname "incusbr-iso" udp dport 67 accept
+		iifname "incusbr-iso" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-solicit, nd-neighbor-solicit, nd-neighbor-advert, mld2-listener-report } accept
+		iifname "incusbr-iso" udp dport 547 accept
+	}
+
+	chain out.incusbr-iso {
+		type filter hook output priority filter; policy accept;
+		oifname "incusbr-iso" tcp sport 53 accept
+		oifname "incusbr-iso" udp sport 53 accept
+		oifname "incusbr-iso" icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+		oifname "incusbr-iso" udp sport 67 accept
+		oifname "incusbr-iso" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem, echo-request, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert, mld2-listener-report } accept
+		oifname "incusbr-iso" udp sport 547 accept
+	}
+}
+table inet chuck-stack {
+	chain input {
+		type filter hook input priority filter; policy accept;
+		ct state established,related accept
+		iifname "lo" accept
+		iifname "bond0*" drop
+		iifname "enp1s0f*" drop
+	}
+}

@@ -3,6 +3,7 @@
 INCUS_NETWORK=incusbr-iso
 INCUS_PROFILE=isolated
 INCUS_ACL=public-only
+INCUS_NAME_SERVERS="8.8.8.8,8.8.4.4"
 
 # Create artifacts
 incus network create $INCUS_NETWORK
@@ -33,9 +34,6 @@ done
 # Create and configure an incus acl and apply it to our isolated network bridge
 incus network acl rule add $INCUS_ACL ingress action=allow
 incus network acl rule add $INCUS_ACL egress action=allow
-#incus network acl rule add $INCUS_ACL egress action=allow destination=$INCUS_ISO_DNS/32
-#incus network acl rule add $INCUS_ACL egress action=allow destination=$INCUS_ISO_DNS/32 protocol=udp destination_port=53
-#incus network acl rule add $INCUS_ACL egress action=allow destination=$INCUS_ISO_DNS/32 protocol=tcp destination_port=53
 
 # Block private networks
 incus network acl rule add $INCUS_ACL egress action=reject destination=10.0.0.0/8
@@ -43,24 +41,23 @@ incus network acl rule add $INCUS_ACL egress action=reject destination=192.168.0
 incus network acl rule add $INCUS_ACL egress action=reject destination=172.16.0.0/12
 
 incus network set $INCUS_NETWORK security.acls=$INCUS_ACL
+incus network set $INCUS_NETWORK dns.nameservers=$INCUS_NAME_SERVERS
 incus profile device set $INCUS_PROFILE eth0 security.acls=$INCUS_ACL
+
+echo
+
+echo "---- profile ----"
 incus profile show $INCUS_PROFILE
+echo
 
-# Allow $INCUS_NETWORK interface - to be replaced with nftables
-#sudo iptables -A INPUT -i $INCUS_NETWORK -j ACCEPT
-#sudo iptables -A OUTPUT -o $INCUS_NETWORK -j ACCEPT
-#sudo ip6tables -A INPUT -i $INCUS_NETWORK -j ACCEPT
-#sudo ip6tables -A OUTPUT -o $INCUS_NETWORK -j ACCEPT
+echo "---- network ----"
+incus network show $INCUS_NETWORK
+echo
 
-# NAT and forwarding rules - to be replaced with nftables
-#sudo iptables -t nat -A POSTROUTING -s $INCUS_ISO_SUBNET -o $MAIN_INTERFACE -j MASQUERADE
-#sudo iptables -A FORWARD -i $INCUS_NETWORK -o $MAIN_INTERFACE -j ACCEPT
-#sudo iptables -A FORWARD -i $MAIN_INTERFACE -o $INCUS_NETWORK -j ACCEPT
-#sudo ip6tables -t nat -A POSTROUTING -s $INCUS_ISO_SUBNET_V6 -o $MAIN_INTERFACE -j MASQUERADE
-#sudo ip6tables -A FORWARD -i $INCUS_NETWORK -o $MAIN_INTERFACE -j ACCEPT
-#sudo ip6tables -A FORWARD -i $MAIN_INTERFACE -o $INCUS_NETWORK -j ACCEPT
+echo "---- launch instance ----"
+echo incus launch images:debian/12/cloud delme-debian-isolated-01 --profile isolated
+echo
 
-## lauch instances in this isolated bridge
-#incus launch images:debian/12/cloud delme-debian-isolated-01 --profile isolated
-## show acl
-#incus network acl show public-only
+echo "---- show acl ----"
+echo incus network acl show public-only
+echo
