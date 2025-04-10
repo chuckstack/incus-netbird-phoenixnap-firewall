@@ -27,10 +27,6 @@ It is important to note that incus only changes the `table inet incus` section. 
 - I hope to maintain my nftables configurations in a plain text file using the nftables syntax and manage it through a version control system (like `git`). This script should contain all our custom rules within the `table inet chuck-stack` section. However, this might not be possible since some of the interface names are dynamic.
 - We plan to apply our configuration script using the `nft -f <filename>` command. This should help in maintaining a version-controlled, reproducible, and declarative setup.
 
-## Specific Goals for the Server
-
-- I want to ensure no one can gain access to the server from the public interface. Said another way, we only want to access the server through the netbird interface. I am concerned that we need to know the name of the public interface to appropriately block traffic. How do we dynamically get the public interface name?
-
 ## Current Interfaces
 
 ❯ ip link show
@@ -56,27 +52,37 @@ It is important to note that incus only changes the `table inet incus` section. 
 
 ## Action Needed
 
-Please attempt to create the next version of this file.
+Need a way to dynamically find and set the bond0* and enp1s0f* values. These can be different from server to server.
 
-## Simple Version
+How would you change the current working version to set the bond0* and enp1s0f* values?
 
-Below is a proposed solution. It has a problem in that it drops just about everything. For example, when I create a new incus container, it cannot get an ipv4 or ipv6 ip address.
+## Current Working Version
 
 ```nft
+#!/usr/sbin/nft -f
+
+# This configuration blocks all incoming traffic except through Netbird
 table inet chuck-stack {
     chain input {
-        type filter hook input priority filter; policy drop;
-
-        # Allow loopback
-        iifname "lo" accept
+        type filter hook input priority 0; policy accept;
 
         # Allow established connections
         ct state related,established accept
 
-        # Allow Netbird interface
+        # Allow loopback
+        iifname "lo" accept
+
+        # Allow Netbird interface (redundant since policy is accept, but explicit)
         iifname "wt0" accept
 
-        # Everything else is dropped by the policy
+        # Allow incus bridge (redundant since policy is accept, but explicit)
+        iifname "incusbr0" accept
+
+        # Drop traffic from bond0 and its VLANs (public interfaces)
+        iifname "bond0*" drop
+
+        # Drop traffic from physical interfaces
+        iifname "enp1s0f*" drop
     }
 }
 
@@ -84,83 +90,3 @@ table inet chuck-stack {
 # to add: sudo nft -f chuck-stack-2.conf
 # to drop: sudo nft delete table inet chuck-stack
 ```
-
-## Duplicate Version
-
-Below is a proposed solution. It has a problem in that is duplicates logic from the other rules.
-
-```nft
-#!/usr/sbin/nft -f
-
-table inet chuck-stack {
-    chain input {
-        type filter hook input priority filter; policy drop;
-
-        # Allow loopback
-        iifname "lo" accept
-
-        # Allow established connections
-        ct state related,established accept
-
-        # Allow Netbird interface
-        iifname "wt0" accept
-
-        # Allow Incus bridge interface traffic
-        iifname "incusbr0" accept
-
-        # Allow DHCPv4 and DHCPv6 client traffic
-        udp sport { 67, 547 } udp dport { 68, 546 } accept
-
-        # Allow DNS responses
-        udp sport 53 accept
-        tcp sport 53 accept
-
-        # Allow ICMPv4 for basic network functionality
-        ip protocol icmp icmp type {
-            echo-request,
-            echo-reply,
-            destination-unreachable,
-            time-exceeded,
-            parameter-problem
-        } accept
-
-        # Allow ICMPv6 for basic network functionality
-        ip6 nexthdr icmpv6 icmpv6 type {
-            echo-request,
-            echo-reply,
-            destination-unreachable,
-            packet-too-big,
-            time-exceeded,
-            parameter-problem,
-            nd-router-solicit,
-            nd-router-advert,
-            nd-neighbor-solicit,
-            nd-neighbor-advert,
-            mld2-listener-report
-        } accept
-    }
-
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-
-        # Allow established connections
-        ct state related,established accept
-
-        # Allow traffic through Incus bridge
-        iifname "incusbr0" accept
-        oifname "incusbr0" accept
-
-        # Allow Netbird forwarding (managed by Netbird's own rules)
-        iifname "wt0" accept
-        oifname "wt0" accept
-    }
-
-    chain output {
-        type filter hook output priority filter; policy accept;
-    }
-}
-```
-
-## Goal Restated
-
-We simply want to block public traffic so that the only way into the server is via the existing netbird rules.
