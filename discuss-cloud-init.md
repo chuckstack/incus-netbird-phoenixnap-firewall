@@ -1,12 +1,21 @@
 # Summary
 
-I need a #cloud-config file that will do the following:
+This file contains a #cloud-config file that will do the following:
 
 - block all traffic except for one IP <MY_IP> on ssh
 - allow for ssh via both IPv4 and IPv6
-- use nftables
+- use nftables (instead of iptables)
 
-## Proposed Solution for Initial cloud-init Firewall
+## Action
+
+You need to get the following before continuing:
+
+- Get your IPv4 and IPv6 addresses using:
+  - To find your IPv4: `curl -4 ifconfig.me`
+  - To find your IPv6: `curl -6 ifconfig.me`
+- Update the below script and replace <MY_IP> <MY_IPv6> accordingly
+
+## Initial cloud-init Firewall
 
 ```yaml
 #cloud-config
@@ -28,8 +37,6 @@ write_files:
 
       # Created to run one time upon initial boot
       # To be deleted using: sudo nft delete table inet chuck-stack-temp 
-      # To find your IPv4: curl -4 ifconfig.me
-      # To find your IPv6: curl -6 ifconfig.me
 
 
       table inet chuck-stack-temp {
@@ -72,24 +79,3 @@ runcmd:
 
 final_message: "The system is now configured with nftables firewall allowing SSH only from authorized IP addresses"
 ```
-
-## Change Firewall after Netbird Confirmed
-
-After you have:
-- installed Netbird and Incus
-- confirmed you can ssh using Netbird url
-- given your user a password so that you have backup option via a web terminal/console
-
-... perform the following to remove the chuck-stack-temp and deploy the final chuck-stack firewall rules
-
-```bash
-sudo nft delete table inet chuck-stack-temp
-sudo nft -f ./chuck-stack.conf
-sudo cp ./chuck-stack.conf /etc/nftables.conf
-```
-
-Notes:
-
-- the above bash commands assume you used the cloud-init script to create the chuck-stack-temp firewall rule
-- as a result, you are ok with replacing the current nftables.conf with the contents in chuck-stack.conf
-- You should NOT restart the nftables service because incus and netbird do not automatically restart the rules immediately
