@@ -60,8 +60,9 @@ sudo cp ./chuck-stack.conf /etc/nftables.conf # make new rules persist
 
 Notes:
 
-- the above bash commands assume you used the cloud-init script to create the chuck-stack-temp firewall rule
-- as a result, you are ok with replacing the current nftables.conf with the contents in chuck-stack.conf
+- We went to great effort to document the [chuck-stack.conf](./chuck-stack.conf) configuration file
+- The above bash commands assume you used the cloud-init script to create the chuck-stack-temp firewall rule
+- As a result, you are ok with replacing the current nftables.conf with the contents in chuck-stack.conf
 - You should NOT restart the nftables service because incus and netbird do not automatically restart the rules immediately
 
 ## Instructions
