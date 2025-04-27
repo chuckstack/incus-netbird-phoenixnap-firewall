@@ -35,7 +35,7 @@ We assume the following:
 
 ### Create Temporary Firewall
 
-Copy and paste the [cloud-init](./discuss-cloud-init.md) #cloud-config text into the appropriate text box when launching your new server. Note to follow the indicated directions/actions.
+Copy and paste the [cloud-init](./cloud-init.md) #cloud-config text into the appropriate text box when launching your new server. Note to follow the indicated directions/actions.
 
 This will create a temporary nftables firewall to protect your server until you are ready to move forward.
 
