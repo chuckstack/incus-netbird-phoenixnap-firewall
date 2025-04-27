@@ -76,6 +76,7 @@ runcmd:
   - systemctl enable nftables
 
 # to show rules: sudo nft list ruleset
+# to show cloud-init status: cloud-init status
 # to drop: sudo nft delete table inet chuck-stack-temp
 # to show interfaces: ip link show
 
