@@ -60,6 +60,9 @@ write_files:
           # Allow SSH only from specific IPs
           tcp dport 22 ip saddr <MY_IP> accept      # Replace with your IPv4 address
           tcp dport 22 ip6 saddr <MY_IPv6> accept   # Replace with your IPv6 address
+
+          # Allow Netbird interface - needed for netbird testing
+          iifname "wt0" accept
         }
 
         chain forward {
