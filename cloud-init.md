@@ -17,6 +17,8 @@ You need to get the following before continuing:
 
 ## Initial cloud-init Firewall
 
+Updated the <MY_IP> <MY_IPv6> values below and copy/paste this text into the cloud-init textbox when launching your server.
+
 ```yaml
 #cloud-config
 
