@@ -28,7 +28,7 @@ We assume that Incus will run on a Debian (or derivative like Ubuntu) server for
 
 We assume the following:
 
-- You have already fired up your first server in your bare metal cloud provider.
+- You have already fired up a test server in your bare metal cloud provider.
 - You ran `ip a` to see the network interfaces that are provided to your machine by default.
 - Your bare metal cloud provider does not implement any firewall rules by default.
 - Your bare metal cloud provider supports `cloud-init` to configure your server by default.
