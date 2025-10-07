@@ -67,6 +67,10 @@ write_files:
 
         chain forward {
           type filter hook forward priority 0; policy drop;
+
+          # Allow Incus container traffic
+          iifname "incusbr0" accept
+          oifname "incusbr0" accept
         }
 
         chain output {
