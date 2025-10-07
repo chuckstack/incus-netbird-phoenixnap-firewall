@@ -63,10 +63,16 @@ write_files:
 
           # Allow Netbird interface - needed for netbird testing
           iifname "wt0" accept
+
+          # Allow Incus bridge - needed for DHCP and container management
+          iifname "incusbr0" accept
         }
 
         chain forward {
           type filter hook forward priority 0; policy drop;
+
+          # Allow established/related connections for forwarding
+          ct state established,related accept
 
           # Allow Incus container traffic
           iifname "incusbr0" accept
